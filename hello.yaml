@@ -1,0 +1,15 @@
+# This file was generated using the `serve build` command on Ray v2.5.1.
+
+import_path: hello:graph
+
+runtime_env: {}
+
+host: 0.0.0.0
+
+port: 8000
+
+deployments:
+
+- name: Doubler
+
+- name: HelloDeployment

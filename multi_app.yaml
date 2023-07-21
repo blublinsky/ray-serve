@@ -1,0 +1,54 @@
+# This file was generated using the `serve build` command on Ray v2.5.1.
+
+proxy_location: EveryNode
+
+http_options:
+
+  host: 0.0.0.0
+
+  port: 8000
+
+applications:
+
+- name: fruit
+
+  route_prefix: /fruit
+
+  import_path: fruit_url:graph
+
+  runtime_env: {}
+
+  deployments:
+
+  - name: MangoStand
+    user_config:
+      price: 3
+
+  - name: OrangeStand
+    user_config:
+      price: 2
+
+  - name: PearStand
+    user_config:
+      price: 4
+
+  - name: FruitMarket
+    num_replicas: 2
+
+  - name: DAGDriver
+
+- name: greet
+
+  route_prefix: /greet
+
+  import_path: hello_url:graph
+
+  runtime_env: {}
+
+  deployments:
+
+  - name: Doubler
+
+  - name: HelloDeployment
+
+  - name: DAGDriver

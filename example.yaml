@@ -1,0 +1,138 @@
+apiVersion: ray.io/v1alpha1
+kind: RayCluster
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+    # An unique identifier for the head node and workers of this cluster.
+  name: raycluster-heterogeneous
+spec:
+  rayVersion: '2.5.0'
+  ######################headGroupSpecs#################################
+  # Ray head pod template
+  headGroupSpec:
+    # The `rayStartParams` are used to configure the `ray start` command.
+    # See https://github.com/ray-project/kuberay/blob/master/docs/guidance/rayStartParams.md for the default settings of `rayStartParams` in KubeRay.
+    # See https://docs.ray.io/en/latest/cluster/cli.html#ray-start for all available options in `rayStartParams`.
+    rayStartParams:
+      dashboard-host: 0.0.0.0
+      metrics-export-port: "8080"
+      num-cpus: "0"
+      dashboard-agent-listen-port: "52365"
+    serviceType: ClusterIP
+    enableIngress: true
+    #pod template
+    template:
+      spec:
+        imagePullSecrets:
+          - name: quay
+        containers:
+          - name: ray-head
+            image: quay.io/ibmdpdev/ray-serve:2.5.1-py310
+            imagePullPolicy: Always
+            env:
+              - name: MY_POD_IP
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.podIP
+            ports:
+              - containerPort: 6379
+                name: redis
+                protocol: TCP
+              - containerPort: 10001
+                name: head
+                protocol: TCP
+              - containerPort: 8265
+                name: dashboard
+                protocol: TCP
+              - containerPort: 8080
+                name: metrics
+                protocol: TCP
+              - containerPort: 8000
+                name: serve
+              - containerPort: 52365
+                name: dashboard-agent
+            resources:
+              limits:
+                cpu: "1"
+              requests:
+                cpu: "1"
+            volumeMounts:
+              - mountPath: /tmp/ray
+                name: ray-logs
+        volumes:
+          - name: ray-logs
+            emptyDir: {}
+  workerGroupSpecs:
+    # the pod replicas in this group typed worker
+    - replicas: 5
+      minReplicas: 5
+      maxReplicas: 5
+      # logical group name, for this called small-group, also can be functional
+      groupName: small-group
+      # The `rayStartParams` are used to configure the `ray start` command.
+      # See https://github.com/ray-project/kuberay/blob/master/docs/guidance/rayStartParams.md for the default settings of `rayStartParams` in KubeRay.
+      # See https://docs.ray.io/en/latest/cluster/cli.html#ray-start for all available options in `rayStartParams`.
+      rayStartParams:
+        node-ip-address: $MY_POD_IP
+      scaleStrategy: {}
+      #pod template
+      template:
+        spec:
+          imagePullSecrets:
+            - name: quay
+          containers:
+            - name: ray-worker # must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc'
+              image: quay.io/ibmdpdev/ray-serve:2.5.1-py310
+              imagePullPolicy: Always
+              env:
+                - name: RAY_DISABLE_DOCKER_CPU_WARNING
+                  value: "1"
+                - name: TYPE
+                  value: worker
+                - name: CPU_REQUEST
+                  valueFrom:
+                    resourceFieldRef:
+                      containerName: ray-worker
+                      divisor: "0"
+                      resource: requests.cpu
+                - name: CPU_LIMITS
+                  valueFrom:
+                    resourceFieldRef:
+                      containerName: ray-worker
+                      divisor: "0"
+                      resource: limits.cpu
+                - name: MEMORY_REQUESTS
+                  valueFrom:
+                    resourceFieldRef:
+                      containerName: ray-worker
+                      divisor: "0"
+                      resource: requests.cpu
+                - name: MEMORY_LIMITS
+                  valueFrom:
+                    resourceFieldRef:
+                      containerName: ray-worker
+                      divisor: "0"
+                      resource: limits.cpu
+                - name: MY_POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: MY_POD_IP
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: status.podIP
+              resources:
+                limits:
+                  cpu: "2"
+                requests:
+                  cpu: "2"
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh","-c","ray stop"]
+              volumeMounts:
+                - mountPath: /tmp/ray
+                  name: ray-logs
+          volumes:
+            - name: ray-logs
+              emptyDir: {}
