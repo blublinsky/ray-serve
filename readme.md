@@ -113,4 +113,7 @@ and run:
 curl "http://localhost:8000/greet/?name=Ray"
 curl -H "Content-Type: application/json" -d '["PEAR", 2]' "http://localhost:8000/fruit/"
 ````
+Alternatively you can use POST. Also for curl, note a 
+[tip](https://docs.ray.io/en/latest/serve/deploy-many-models/multi-app.html#deploy-the-applications)
+
 In addition to port-forward, you can create a route exposing port 8000 and using it for invocation.
