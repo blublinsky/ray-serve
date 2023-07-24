@@ -1,9 +1,11 @@
 # This implementation is based on serve Rest APIs described at
 # https://docs.ray.io/en/latest/serve/api/index.html#serve-rest-api
+import time
 
 import requests
 import yaml
 import json
+import time
 
 class ServeManagemenAPIs(object):
     def __init__(self, base: str = "http://localhost:52365", timeout: int = 120) -> None:
@@ -131,6 +133,25 @@ class ServeManagemenAPIs(object):
             print(f'Failed to list clusters - {response.content.decode("utf-8")}')
             return response.status_code, None
         return response.status_code, response.json()
+
+    def waitApplicationsDeploymentComplete(self) -> tuple[int, dict]:
+        status = "deploying"
+        while status == "deploying":
+            # get deployment
+            reply = self.getApplicationDeployments()
+            if reply[0] != 200:
+                return reply[0], None
+            applications = reply[1]['applications']
+            deployed = 0
+            for app in applications.values():
+                if app['status'].lower() != "deploying":
+                    deployed = deployed + 1
+            if deployed >= len(applications):
+                result = {}
+                for app in applications.values():
+                    result[app['name']] = app['status']
+                return 200, result
+            time.sleep(5)
 
     # Note that this is deleting all applications and stop serve.
     def deleteApplications(self) -> int:

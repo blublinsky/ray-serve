@@ -118,11 +118,9 @@ applications:
     assert reply == 200
     print(f"Deployed serve applications using Yaml, reply {reply}")
 
-    time.sleep(5)
-
-    reply = manager.getApplicationDeployments()
+    reply = manager.waitApplicationsDeploymentComplete()
     assert reply[0] == 200
-    print(f"Get applications deployment, reply {reply[1]}")
+    print(f"Get applications deployment complete, reply {reply[1]}")
 
     reply = manager.deleteApplications()
     assert reply == 200
