@@ -8,9 +8,11 @@ import json
 import time
 
 class ServeManagemenAPIs(object):
-    def __init__(self, base: str = "http://localhost:52365", timeout: int = 120) -> None:
+    def __init__(self, base: str = "http://localhost:52365", completion_timeout: int = 5,
+                 http_timeout: int = 120) -> None:
         self.base = base
-        self.tmout = timeout
+        self.http_tmout = http_timeout
+        self.c_tmout = completion_timeout
         self.api_base = "/api/serve/"
 
     def deployYaml(self, yamls: str) -> int:
@@ -19,7 +21,7 @@ class ServeManagemenAPIs(object):
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         depl = json.dumps(yaml.safe_load(yamls))
         try:
-            response = requests.put(url=url, headers=headers, data=depl, timeout=self.tmout)
+            response = requests.put(url=url, headers=headers, data=depl, timeout=self.http_tmout)
         except Exception as e:
             print(f"Exception during deploying {e}")
             return 500
@@ -33,7 +35,7 @@ class ServeManagemenAPIs(object):
         url = self.base + self.api_base + "deployments/"
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         try:
-            response = requests.put(url=url, headers=headers, json=yamld, timeout=self.tmout)
+            response = requests.put(url=url, headers=headers, json=yamld, timeout=self.http_tmout)
         except Exception as e:
             print(f"Exception during deploying {e}")
             return 500
@@ -47,7 +49,7 @@ class ServeManagemenAPIs(object):
         url = self.base + self.api_base + "deployments/status"
         headers = {"Accept": "application/json"}
         try:
-            response = requests.get(url=url, headers=headers, timeout=self.tmout)
+            response = requests.get(url=url, headers=headers, timeout=self.http_tmout)
         except Exception as e:
             print(f"Exception during getting status {e}")
             return 500, None
@@ -57,12 +59,24 @@ class ServeManagemenAPIs(object):
             return response.status_code, None
         return response.status_code, response.json()
 
+    def waitDeploymentComplete(self) -> tuple[int, str]:
+        status = "deploying"
+        while status.lower() == "deploying":
+            time.sleep(self.c_tmout)
+            # get deployment
+            reply = self.getDeploymentStatus()
+            if reply[0] != 200:
+                return reply[0], None
+            status = reply[1]['app_status']['status']
+        return 200, status
+
+
     def getDeployments(self) -> tuple[int, dict]:
         # Execute HTTP request
         url = self.base + self.api_base + "deployments/"
         headers = {"Accept": "application/json"}
         try:
-            response = requests.get(url=url, headers=headers, timeout=self.tmout)
+            response = requests.get(url=url, headers=headers, timeout=self.http_tmout)
         except Exception as e:
             print(f"Exception during getting deployments {e}")
             return 500, None
@@ -78,7 +92,7 @@ class ServeManagemenAPIs(object):
         url = self.base + self.api_base + "deployments/"
         headers = {"Accept": "application/json"}
         try:
-            response = requests.delete(url=url, headers=headers, timeout=self.tmout)
+            response = requests.delete(url=url, headers=headers, timeout=self.http_tmout)
         except Exception as e:
             print(f"Exception during deleting deployments {e}")
             return 500
@@ -94,7 +108,7 @@ class ServeManagemenAPIs(object):
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         depl = json.dumps(yaml.safe_load(yamls))
         try:
-            response = requests.put(url=url, headers=headers, data=depl, timeout=self.tmout)
+            response = requests.put(url=url, headers=headers, data=depl, timeout=self.http_tmout)
         except Exception as e:
             print(f"Exception deploying applications {e}")
             return 500
@@ -108,7 +122,7 @@ class ServeManagemenAPIs(object):
         url = self.base + self.api_base + "applications/"
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         try:
-            response = requests.put(url=url, headers=headers, json=yamld, timeout=self.tmout)
+            response = requests.put(url=url, headers=headers, json=yamld, timeout=self.http_tmout)
         except Exception as e:
             print(f"Exception deploying applications {e}")
             return 500
@@ -124,7 +138,7 @@ class ServeManagemenAPIs(object):
         url = self.base + self.api_base + "applications/"
         headers = {"Accept": "application/json"}
         try:
-            response = requests.get(url=url, headers=headers, timeout=self.tmout)
+            response = requests.get(url=url, headers=headers, timeout=self.http_tmout)
         except Exception as e:
             print(f"Exception getting applications {e}")
             return 500, None
@@ -151,7 +165,7 @@ class ServeManagemenAPIs(object):
                 for app in applications.values():
                     result[app['name']] = app['status']
                 return 200, result
-            time.sleep(5)
+            time.sleep(self.c_tmout)
 
     # Note that this is deleting all applications and stop serve.
     def deleteApplications(self) -> int:
@@ -159,7 +173,7 @@ class ServeManagemenAPIs(object):
         url = self.base + self.api_base + "applications/"
         headers = {"Accept": "application/json"}
         try:
-            response = requests.delete(url=url, headers=headers, timeout=self.tmout)
+            response = requests.delete(url=url, headers=headers, timeout=self.http_tmout)
         except Exception as e:
             print(f"Exception deleting applications {e}")
             return 500

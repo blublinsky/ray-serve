@@ -20,7 +20,7 @@ deployments:
     assert reply == 200
     print(f"Deployed serve using Yaml, reply {reply}")
 
-    reply = manager.getDeploymentStatus()
+    reply = manager.waitDeploymentComplete()
     assert reply[0] == 200
     print(f"Deployment status {reply[1]}")
 
