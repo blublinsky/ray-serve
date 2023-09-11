@@ -3,6 +3,13 @@
 Here we describe the main caveats of using KubeRay for deploying and running Ray Serve. It is mostly based on this
 [documentation](https://docs.ray.io/en/latest/serve/production-guide/index.html)
 
+## Install Kuberay operator
+
+Install Kuberay operator following [documentation](https://ray-project.github.io/kuberay/components/operator/) 
+````
+kubectl create -k "github.com/ray-project/kuberay/ray-operator/config/default?ref=v0.6.0&timeout=90s"
+````
+
 ## Configuration of the cluster itself
 
 Unfortunately usage of Ray serve requires a bit of specific cluster configuration. The example of of such configuration
@@ -101,6 +108,25 @@ When this is done and cluster is restarted, we can deploy our applications as fo
 ````
 serve deploy multi_app.yaml
 ````
+
+Alternatively we can deploy using HTTP:
+
+````
+curl -X PUT http://localhost:52365/api/serve/applications/ -H 'Content-Type: application/json' -d '{"proxy_location": "EveryNode", "http_options": {"host": "0.0.0.0", "port": 8000},
+                  "applications": [{"name": "fruit", "route_prefix": "/fruit", "import_path": "fruit_url:graph",
+                                    "runtime_env": {},
+                                    "deployments": [{"name": "MangoStand", "user_config": {"price": 3}},
+                                                    {"name": "OrangeStand", "user_config": {"price": 2}},
+                                                    {"name": "PearStand", "user_config": {"price": 4}},
+                                                    {"name": "FruitMarket", "num_replicas": 2},
+                                                    {"name": "DAGDriver"}]},
+                                    {"name": "greet", "route_prefix": "/greet", "import_path": "hello_url:graph",
+                                     "runtime_env": {},
+                                     "deployments": [{"name": "Doubler"},
+                                                     {"name": "HelloDeployment"},
+                                                     {"name": "DAGDriver"}]}]}'
+````
+
 Once deployment is completed, you can port forward:
 
 ````
